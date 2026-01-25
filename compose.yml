@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: nouchka/sqlite3
+    container_name: sqlite3_database
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./data:/data
+    working_dir: /data
+    command: sqlite3
+
+  backend:
+    build: .
+    container_name: orchestra-backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - LM_STUDIO_URL=http://host.docker.internal:1234/v1/chat/completions
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - orchestra-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: orchestra-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - orchestra-network
+    restart: unless-stopped
+
+networks:
+  orchestra-network:
+    driver: bridge
