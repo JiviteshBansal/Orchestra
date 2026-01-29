@@ -55,29 +55,37 @@ def get_database_snapshot():
     return "\n".join(snapshot_lines)
 
 
-def ask_llm(question, db_snapshot):
+def ask_llm(question, db_snapshot, system_instruction=None, tone=None):
+    system_content = (
+        "You are a database analyst. "
+        "Answer only using the provided database snapshot. "
+        "Do not invent tables, columns, or rows."
+    )
+
+    if system_instruction:
+        system_content = system_instruction
+    
+    if tone:
+        system_content += f" Answer in a {tone} tone."
+
     messages = [
         {
             "role": "system",
-            "content": (
-                "You are a database analyst. "
-                "Answer only using the provided database snapshot. "
-                "Do not invent tables, columns, or rows."
-            )
+            "content": system_content
         },
         {
             "role": "user",
             "content": (
                 f"Database snapshot:\n{db_snapshot}\n\n"
                 f"Question:\n{question}"
-            )
+            ) if db_snapshot else question
         }
     ]
 
     payload = {
         "model": MODEL_NAME,
         "messages": messages,
-        "temperature": 0.2,
+        "temperature": 0.7 if tone else 0.2,
         "max_tokens": 512
     }
 
@@ -96,6 +104,30 @@ def ask_llm(question, db_snapshot):
 @app.route("/", methods=["GET"])
 def home():
     return "Orchestra backend running on port 3000"
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    body = request.get_json()
+    if not body or "message" not in body:
+        return jsonify({"error": "Missing message"}), 400
+
+    message = body["message"]
+    tone = body.get("tone")
+    training_data = body.get("training_data")
+
+    # For general chat, we might not need the DB snapshot, but keeping it for context if they ask about DB
+    # However, for pure chat as requested ("chat with model"), maybe we don't force DB context?
+    # The requirement says "chat with the model".
+    # Let's pass db_snapshot only if it looks like a DB question? 
+    # Or to be safe and simple, let's just NOT pass DB snapshot for this specific chat endpoint 
+    # unless we want unified behavior. 
+    # The user asked to "chat with the model", implying general chat.
+    # The existing code was very specific to DB Q&A.
+    # I will modify ask_llm to handle optional db_snapshot.
+    
+    answer = ask_llm(message, None, system_instruction=training_data, tone=tone)
+    return jsonify({"answer": answer})
 
 
 @app.route("/api/model-status", methods=["GET"])

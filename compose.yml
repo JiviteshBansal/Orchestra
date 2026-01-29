@@ -19,6 +19,7 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
+      - .:/app
     environment:
       - LM_STUDIO_URL=http://host.docker.internal:1234/v1/chat/completions
     extra_hosts:
