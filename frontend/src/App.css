@@ -90,7 +90,6 @@ h1 {
     background-color: var(--error);
 }
 
-/* Dashboard Grid */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 300px 1fr;
@@ -111,7 +110,6 @@ h1 {
     overflow-y: auto;
 }
 
-/* Config Section */
 .config-section {
     background-color: var(--card-bg);
     border: 1px solid var(--border);
@@ -154,7 +152,6 @@ h1 {
     border-color: var(--accent);
 }
 
-/* Chat Section */
 .chat-section {
     background-color: var(--card-bg);
     border: 1px solid var(--border);
@@ -222,7 +219,6 @@ h1 {
     border: 1px solid var(--error);
 }
 
-/* Cursor animation for streaming */
 .cursor {
     display: inline-block;
     margin-left: 2px;
@@ -243,7 +239,6 @@ h1 {
     }
 }
 
-/* Smooth message appearance */
 .message {
     animation: slideIn 0.2s ease-out;
 }
@@ -259,7 +254,6 @@ h1 {
         transform: translateY(0);
     }
 }
-
 
 .chat-input-area {
     display: flex;
@@ -300,7 +294,6 @@ h1 {
     cursor: not-allowed;
 }
 
-/* Table Section */
 .tables-section h3 {
     color: var(--accent);
     margin-bottom: 1rem;

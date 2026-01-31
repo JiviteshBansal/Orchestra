@@ -7,7 +7,6 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Paths and config
 DB_PATH = "data/database.db"
 LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://host.docker.internal:1234/v1/chat/completions")
 MODEL_NAME = "codellama-7b-instruct"
@@ -116,16 +115,6 @@ def chat():
     tone = body.get("tone")
     training_data = body.get("training_data")
 
-    # For general chat, we might not need the DB snapshot, but keeping it for context if they ask about DB
-    # However, for pure chat as requested ("chat with model"), maybe we don't force DB context?
-    # The requirement says "chat with the model".
-    # Let's pass db_snapshot only if it looks like a DB question? 
-    # Or to be safe and simple, let's just NOT pass DB snapshot for this specific chat endpoint 
-    # unless we want unified behavior. 
-    # The user asked to "chat with the model", implying general chat.
-    # The existing code was very specific to DB Q&A.
-    # I will modify ask_llm to handle optional db_snapshot.
-    
     answer = ask_llm(message, None, system_instruction=training_data, tone=tone)
     return jsonify({"answer": answer})
 
@@ -168,7 +157,7 @@ def chat_stream():
             "messages": messages,
             "temperature": 0.7 if tone else 0.2,
             "max_tokens": 512,
-            "stream": True  # Enable streaming
+            "stream": True
         }
 
         try:
@@ -185,7 +174,7 @@ def chat_stream():
                 if line:
                     line_str = line.decode('utf-8')
                     if line_str.startswith('data: '):
-                        data_str = line_str[6:]  # Remove 'data: ' prefix
+                        data_str = line_str[6:]
                         if data_str.strip() == '[DONE]':
                             break
                         try:
@@ -207,10 +196,7 @@ def chat_stream():
 @app.route("/api/model-status", methods=["GET"])
 def model_status():
     try:
-        # Use a shorter timeout for status check and correct URL
         base_url = os.environ.get("LM_STUDIO_URL", "http://host.docker.internal:1234/v1/chat/completions")
-        # Extract base domain from the full URL for the models endpoint if needed, or just hardcode/env var it too.
-        # For simplicity assuming LM Studio structure:
         status_url = base_url.replace("/chat/completions", "/models")
         r = requests.get(status_url, timeout=2)
         running = r.status_code == 200

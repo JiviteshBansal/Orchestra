@@ -19,7 +19,6 @@ function App() {
       .catch(() => setLoading(false))
   }, [])
 
-  // Chat state
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState("")
   const [tone, setTone] = useState("")
@@ -35,7 +34,6 @@ function App() {
     setInput("")
     setChatLoading(true)
 
-    // Add placeholder for model response that will be streamed
     const modelMessageIndex = messages.length + 1
     setMessages(prev => [...prev, { role: "model", content: "", streaming: true }])
 
@@ -92,7 +90,6 @@ function App() {
         }
       }
 
-      // Mark streaming as complete
       setMessages(prev => {
         const newMessages = [...prev]
         if (newMessages[modelMessageIndex]) {
