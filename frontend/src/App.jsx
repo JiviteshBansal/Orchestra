@@ -30,25 +30,91 @@ function App() {
     if (!input.trim()) return
 
     const userMessage = { role: "user", content: input }
+    const currentInput = input
     setMessages(prev => [...prev, userMessage])
     setInput("")
     setChatLoading(true)
 
+    // Add placeholder for model response that will be streamed
+    const modelMessageIndex = messages.length + 1
+    setMessages(prev => [...prev, { role: "model", content: "", streaming: true }])
+
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: input,
+          message: currentInput,
           tone: tone,
           training_data: trainingData
         })
       })
-      const data = await response.json()
-      setMessages(prev => [...prev, { role: "model", content: data.answer }])
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedContent = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.content) {
+                accumulatedContent += parsed.content
+                setMessages(prev => {
+                  const newMessages = [...prev]
+                  newMessages[modelMessageIndex] = {
+                    role: "model",
+                    content: accumulatedContent,
+                    streaming: true
+                  }
+                  return newMessages
+                })
+              } else if (parsed.error) {
+                throw new Error(parsed.error)
+              }
+            } catch (e) {
+              if (e instanceof SyntaxError) continue
+              throw e
+            }
+          }
+        }
+      }
+
+      // Mark streaming as complete
+      setMessages(prev => {
+        const newMessages = [...prev]
+        if (newMessages[modelMessageIndex]) {
+          newMessages[modelMessageIndex] = {
+            role: "model",
+            content: accumulatedContent,
+            streaming: false
+          }
+        }
+        return newMessages
+      })
+
     } catch (error) {
       console.error("Chat error:", error)
-      setMessages(prev => [...prev, { role: "error", content: "Failed to get response" }])
+      setMessages(prev => {
+        const newMessages = [...prev]
+        newMessages[modelMessageIndex] = {
+          role: "error",
+          content: "Failed to get response: " + error.message
+        }
+        return newMessages
+      })
     } finally {
       setChatLoading(false)
     }
@@ -98,10 +164,12 @@ function App() {
             <div className="messages-list">
               {messages.map((msg, i) => (
                 <div key={i} className={`message ${msg.role}`}>
-                  <div className="message-content">{msg.content}</div>
+                  <div className="message-content">
+                    {msg.content}
+                    {msg.streaming && <span className="cursor">▋</span>}
+                  </div>
                 </div>
               ))}
-              {chatLoading && <div className="message model loading">Typing...</div>}
             </div>
             <div className="chat-input-area">
               <input

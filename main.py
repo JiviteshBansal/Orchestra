@@ -130,6 +130,80 @@ def chat():
     return jsonify({"answer": answer})
 
 
+@app.route("/api/chat/stream", methods=["POST"])
+def chat_stream():
+    from flask import Response
+    import json
+    
+    body = request.get_json()
+    if not body or "message" not in body:
+        return jsonify({"error": "Missing message"}), 400
+
+    message = body["message"]
+    tone = body.get("tone")
+    training_data = body.get("training_data")
+
+    def generate():
+        system_content = "You are a helpful assistant."
+        
+        if training_data:
+            system_content = training_data
+        
+        if tone:
+            system_content += f" Answer in a {tone} tone."
+
+        messages = [
+            {
+                "role": "system",
+                "content": system_content
+            },
+            {
+                "role": "user",
+                "content": message
+            }
+        ]
+
+        payload = {
+            "model": MODEL_NAME,
+            "messages": messages,
+            "temperature": 0.7 if tone else 0.2,
+            "max_tokens": 512,
+            "stream": True  # Enable streaming
+        }
+
+        try:
+            response = requests.post(
+                LM_STUDIO_URL,
+                headers={"Content-Type": "application/json"},
+                json=payload,
+                stream=True,
+                timeout=120
+            )
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode('utf-8')
+                    if line_str.startswith('data: '):
+                        data_str = line_str[6:]  # Remove 'data: ' prefix
+                        if data_str.strip() == '[DONE]':
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if 'choices' in data and len(data['choices']) > 0:
+                                delta = data['choices'][0].get('delta', {})
+                                content = delta.get('content', '')
+                                if content:
+                                    yield f"data: {json.dumps({'content': content})}\n\n"
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream')
+
+
+
 @app.route("/api/model-status", methods=["GET"])
 def model_status():
     try:
