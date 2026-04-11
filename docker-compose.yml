@@ -1,0 +1,41 @@
+services:
+  orchestra-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orchestra-ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./projects:/app/projects
+    environment:
+      - LM_STUDIO_BASE_URL=http://host.docker.internal:1234/v1
+      - LM_STUDIO_MODEL=codellama-7b-instruct
+      - LLM_TIMEOUT=120
+      - LLM_MAX_TOKENS=2048
+      - LLM_TEMPERATURE=0.7
+      - DEBUG=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  sandbox:
+    build:
+      context: .
+      dockerfile: docker/sandbox.Dockerfile
+    container_name: orchestra-sandbox
+    volumes:
+      - ./projects:/workspace
+    network_mode: "none"
+    mem_limit: 512m
+    cpus: 0.5
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M
+    command: [ "tail", "-f", "/dev/null" ]

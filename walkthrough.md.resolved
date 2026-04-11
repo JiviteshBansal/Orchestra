@@ -1,0 +1,60 @@
+# Orchestra AI — Walkthrough
+
+## What Was Built
+
+A complete **local-first multi-agent AI software development system** with 50+ source files across 12 subsystems.
+
+### Backend (Python + FastAPI)
+| Component | Files | Description |
+|-----------|-------|-------------|
+| **Data Models** | `models/*.py` | 5 SQLAlchemy ORM models: Task, Agent, Artifact, RunLog, PullRequest |
+| **Schemas** | `schemas/*.py` | Pydantic request/response schemas for all models |
+| **API Routes** | `api/*.py` | 6 route modules: tasks, agents, orchestrator, artifacts, PRs, dashboard |
+| **Agent Framework** | `agents/*.py` | Base agent + 7 specialized agents + registry with reviewer mapping |
+| **Orchestrator** | [orchestrator/core.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/orchestrator/core.py) | Central brain: request→plan→execute→review→approve→git→PR lifecycle |
+| **LLM Gateway** | [llm/gateway.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/llm/gateway.py) | LM Studio integration (CodeLlama-7B at 127.0.0.1:1234) with fallback chain |
+| **Memory** | `memory/*.py` | Short-term (dict) + Long-term (FAISS vector store) |
+| **Tools** | [tools/executor.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/tools/executor.py) | Docker-sandboxed file/git/terminal execution with per-agent access control |
+| **Git Manager** | [git_manager/operations.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/git_manager/operations.py) | GitPython with branch-per-task, auto-commit, PR creation |
+| **ACE Engine** | [ace/engine.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/ace/engine.py) | Context learning from approved tasks — playbooks, decisions, versioned rollback |
+
+### Frontend (React + TypeScript + Vite)
+| Component | Description |
+|-----------|-------------|
+| **TaskBoard** | Kanban with 4 columns (Backlog/In Progress/Review/Done), task detail modal |
+| **AgentPanel** | All 7 agents with status, task counts, pause/resume controls |
+| **AgentFeed** | Real-time activity log from RunLog table |
+| **ArtifactViewer** | Browse and view code/docs/designs produced by agents |
+| **App** | Request input bar, stats dashboard, toast notifications |
+
+### Infrastructure
+- **Docker sandbox** ([docker/sandbox.Dockerfile](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/docker/sandbox.Dockerfile)) for safe command execution
+- **Setup script** ([setup.sh](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/setup.sh)) — one-command installation
+- **Environment config** ([.env](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/.env)) pointing to LM Studio
+
+## Verification Results
+
+| Test | Result |
+|------|--------|
+| `GET /health` | ✅ `{"status":"healthy"}` |
+| `GET /api/agents/` | ✅ 7 agents returned (PM, UX, Frontend, Backend, FullStack, Research, DB) |
+| `GET /api/tasks/board` | ✅ Empty Kanban (`{backlog:[], in_progress:[], review:[], done:[]}`) |
+| Database init | ✅ All 5 tables created (agents, tasks, artifacts, run_logs, pull_requests) |
+| Agent seeding | ✅ 7 agents auto-seeded on startup |
+| Frontend npm install | ✅ Dependencies installed |
+
+## How to Run
+
+```bash
+# Terminal 1 — Backend
+cd "/Users/jiviteshbansal/Desktop/orchestra AI Made"
+PYTHONPATH=. python3 -m uvicorn backend.main:app --reload --port 8000
+
+# Terminal 2 — Frontend
+cd "/Users/jiviteshbansal/Desktop/orchestra AI Made/frontend"
+npm run dev
+```
+
+- **Dashboard**: http://localhost:3000
+- **API Docs**: http://localhost:8000/docs
+- **LM Studio**: Must be running at http://127.0.0.1:1234

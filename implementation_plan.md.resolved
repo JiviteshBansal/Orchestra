@@ -1,0 +1,336 @@
+# Orchestra AI — Multi-Agent Software Development System
+
+A local-first, hierarchical multi-agent AI system where specialized agents collaboratively plan, build, review, and deliver software projects.
+
+## Architecture Overview
+
+```mermaid
+graph TB
+    UI[React Dashboard] -->|REST API| API[FastAPI Backend]
+    API --> ORCH[Orchestrator]
+    ORCH --> TB[Task Board]
+    ORCH --> AR[Agent Registry]
+    ORCH --> TL[Tool Layer]
+    ORCH --> GIT[Git Manager]
+    ORCH --> MEM[Memory System]
+    ORCH --> LLM[LLM Gateway]
+    ORCH --> ACE[ACE Learning]
+    AR --> PM[PM Agent]
+    AR --> UX[UX Agent]
+    AR --> FE[Frontend Agent]
+    AR --> BE[Backend Agent]
+    AR --> FS[FullStack Agent]
+    AR --> RE[Research Agent]
+    AR --> DB[DB Engineer Agent]
+    MEM --> FAISS[FAISS Vector Store]
+    MEM --> SQLite[SQLite DB]
+    LLM --> LOCAL[Local Models]
+    LLM --> REMOTE[Remote APIs]
+```
+
+## Folder Structure
+
+```
+orchestra-ai/
+├── backend/
+│   ├── main.py                    # FastAPI entrypoint
+│   ├── config.py                  # Settings & env config
+│   ├── database.py                # SQLite + SQLAlchemy setup
+│   ├── models/                    # SQLAlchemy ORM models
+│   │   ├── __init__.py
+│   │   ├── task.py
+│   │   ├── agent.py
+│   │   ├── artifact.py
+│   │   ├── run_log.py
+│   │   └── pull_request.py
+│   ├── schemas/                   # Pydantic request/response schemas
+│   │   ├── __init__.py
+│   │   ├── task.py
+│   │   ├── agent.py
+│   │   ├── artifact.py
+│   │   └── pull_request.py
+│   ├── api/                       # FastAPI route handlers
+│   │   ├── __init__.py
+│   │   ├── tasks.py
+│   │   ├── agents.py
+│   │   ├── artifacts.py
+│   │   ├── orchestrator.py
+│   │   ├── pull_requests.py
+│   │   └── dashboard.py
+│   ├── agents/                    # Agent implementations
+│   │   ├── __init__.py
+│   │   ├── base.py                # Base Agent class
+│   │   ├── registry.py            # Agent registry
+│   │   ├── pm.py
+│   │   ├── ux_designer.py
+│   │   ├── frontend_dev.py
+│   │   ├── backend_dev.py
+│   │   ├── fullstack.py
+│   │   ├── research.py
+│   │   └── db_engineer.py
+│   ├── orchestrator/              # Central orchestrator
+│   │   ├── __init__.py
+│   │   ├── core.py                # Main orchestration logic
+│   │   ├── review.py              # Review cycle management
+│   │   └── workflow.py            # Pipeline workflow engine
+│   ├── tools/                     # Sandboxed tool layer
+│   │   ├── __init__.py
+│   │   ├── base.py                # Tool base class
+│   │   ├── file_system.py
+│   │   ├── git_ops.py
+│   │   ├── terminal.py
+│   │   └── executor.py            # Mediated execution
+│   ├── memory/                    # Memory system
+│   │   ├── __init__.py
+│   │   ├── short_term.py
+│   │   ├── long_term.py           # FAISS vector store
+│   │   └── retrieval.py
+│   ├── llm/                       # LLM Gateway
+│   │   ├── __init__.py
+│   │   ├── gateway.py             # Unified gateway
+│   │   ├── registry.py            # Model registry
+│   │   ├── providers/
+│   │   │   ├── __init__.py
+│   │   │   ├── local.py           # llama.cpp / HuggingFace
+│   │   │   └── remote.py          # OpenAI / Claude
+│   │   ├── router.py              # Model routing engine
+│   │   └── telemetry.py
+│   ├── ace/                       # ACE Learning System
+│   │   ├── __init__.py
+│   │   ├── engine.py              # Core learning engine
+│   │   ├── playbooks.py
+│   │   ├── decisions.py
+│   │   └── versioning.py
+│   ├── git_manager/               # Git + PR integration
+│   │   ├── __init__.py
+│   │   ├── operations.py
+│   │   └── pr_manager.py
+│   └── requirements.txt
+├── frontend/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── index.html
+│   └── src/
+│       ├── main.tsx
+│       ├── App.tsx
+│       ├── api/                   # API client
+│       │   └── client.ts
+│       ├── components/
+│       │   ├── TaskBoard.tsx       # Kanban board
+│       │   ├── TaskCard.tsx
+│       │   ├── AgentFeed.tsx       # Activity feed
+│       │   ├── ArtifactViewer.tsx
+│       │   ├── Controls.tsx        # Approve/Pause/Reassign
+│       │   └── Layout.tsx
+│       ├── pages/
+│       │   ├── Dashboard.tsx
+│       │   └── ProjectView.tsx
+│       └── styles/
+│           └── index.css
+├── data/                          # Runtime data
+│   ├── orchestra.db               # SQLite database
+│   └── vector_store/              # FAISS index
+├── projects/                      # Generated project output
+├── docker/
+│   └── sandbox.Dockerfile         # Sandboxed execution
+├── prompts/                       # Agent system prompts
+│   ├── pm.md
+│   ├── ux_designer.md
+│   ├── frontend_dev.md
+│   ├── backend_dev.md
+│   ├── fullstack.md
+│   ├── research.md
+│   └── db_engineer.md
+├── README.md
+└── setup.sh
+```
+
+---
+
+## Proposed Changes
+
+### Phase 1: Project Foundation
+
+#### [NEW] Folder structure and scaffolding
+Create the complete directory tree and all `__init__.py` files.
+
+#### [NEW] [requirements.txt](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/requirements.txt)
+Dependencies: `fastapi`, `uvicorn`, `sqlalchemy`, `pydantic`, `faiss-cpu`, `sentence-transformers`, `gitpython`, `httpx`, `python-dotenv`
+
+#### [NEW] [config.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/config.py)
+Application settings via Pydantic `BaseSettings` — database path, LLM defaults, Git config, sandbox settings.
+
+---
+
+### Phase 2: Data Models & Database
+
+#### [NEW] [database.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/database.py)
+SQLAlchemy engine + session factory targeting `data/orchestra.db`.
+
+#### [NEW] ORM Models — `models/*.py`
+
+| Model | Key Fields |
+|-------|-----------|
+| **Task** | id, title, description, acceptance_criteria, status (backlog/in_progress/review/done), dependencies, owner_agent_id, reviewer_agent_ids, risk_level, effort_estimate, created_at, updated_at |
+| **Agent** | id, name, role, model_profile, status (idle/busy/paused), capabilities |
+| **Artifact** | id, task_id, agent_id, type (code/doc/design), content, file_path, created_at |
+| **RunLog** | id, task_id, agent_id, action, input_data, output_data, status, timestamp, duration_ms |
+| **PullRequest** | id, task_id, branch_name, title, what, why, how, test_plan, status, created_at |
+
+---
+
+### Phase 3: Agent Framework
+
+#### [NEW] [base.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/agents/base.py)
+Abstract `BaseAgent` class:
+- `execute(task_input: TaskInput) -> AgentOutput` — structured I/O
+- `AgentOutput` contains: reasoning_summary, solution_artifact, attachments, validation_checklist
+- Agents NEVER modify codebase directly — all changes returned as artifacts
+
+#### [NEW] Specialized agents — `agents/pm.py`, `agents/ux_designer.py`, etc.
+Each agent inherits `BaseAgent`, has a system prompt loaded from `prompts/`, and implements domain-specific execution logic. The agent calls the LLM Gateway with its model profile.
+
+#### [NEW] [registry.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/agents/registry.py)
+Agent registry: register, list, get by role/id.
+
+---
+
+### Phase 4: Orchestrator
+
+#### [NEW] [core.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/orchestrator/core.py)
+Central Orchestrator:
+- Receives user requests → delegates to PM for task breakdown
+- Routes tasks to appropriate agents based on role/capability
+- Mediates ALL tool access (file, git, terminal)
+- Manages the full pipeline lifecycle
+
+#### [NEW] [review.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/orchestrator/review.py)
+Review cycle:
+- Every completed task goes to assigned reviewer agent
+- Reviewer returns structured feedback (approve/revise + comments)
+- Orchestrator decides: Approve → Git commit, Revise → send back to owner
+
+#### [NEW] [workflow.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/orchestrator/workflow.py)
+Full pipeline: request → plan → assign → execute → review → approve → git → done
+
+---
+
+### Phase 5: Task Management
+
+#### [NEW] API routes — `api/tasks.py`
+CRUD for tasks + state transitions + board queries. Endpoints:
+- `POST /api/tasks` — create task
+- `GET /api/tasks` — list (filterable by status)
+- `PATCH /api/tasks/{id}` — update/transition
+- `GET /api/tasks/board` — Kanban grouped view
+
+---
+
+### Phase 6: LLM Gateway
+
+#### [NEW] [gateway.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/llm/gateway.py)
+Unified `LLMGateway.generate(prompt, model_profile) -> LLMResponse`. Routes through model registry → provider adapter.
+
+#### [NEW] [registry.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/llm/registry.py)
+Model Registry: register models with metadata (provider, latency, cost, privacy level).
+
+#### [NEW] Provider adapters — `llm/providers/local.py`, `llm/providers/remote.py`
+- **Local**: Calls llama.cpp server or HuggingFace Transformers
+- **Remote**: OpenAI / Claude API calls via httpx
+
+#### [NEW] [router.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/llm/router.py)
+Routes requests based on agent model profile: primary → fallback chain, respecting budget/latency/privacy constraints.
+
+---
+
+### Phase 7: Memory System
+
+#### [NEW] [short_term.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/memory/short_term.py)
+In-memory dict store per task context — requirements, intermediate results, conversation history.
+
+#### [NEW] [long_term.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/memory/long_term.py)
+FAISS vector store using `sentence-transformers` for embedding. Stores design decisions, past outputs, code artifacts. Persisted to `data/vector_store/`.
+
+---
+
+### Phase 8: Git + PR Integration
+
+#### [NEW] [operations.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/git_manager/operations.py)
+GitPython wrapper: init repo, create branch, commit files, list branches.
+
+#### [NEW] [pr_manager.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/git_manager/pr_manager.py)
+Create PR record in DB with: what, why, how, test_plan. Validate before marking task Done.
+
+---
+
+### Phase 9: Tooling Layer
+
+#### [NEW] [executor.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/tools/executor.py)
+All tool execution goes through the Orchestrator → ToolExecutor. Validates permissions, executes, and logs every action to RunLog.
+
+#### [NEW] Tool implementations — `tools/file_system.py`, `tools/git_ops.py`, `tools/terminal.py`
+- **FileSystem**: Read/write/list with per-agent path restrictions
+- **GitOps**: Wrapper around git_manager (commit, branch, etc.)
+- **Terminal**: Subprocess execution in sandboxed environment
+
+---
+
+### Phase 10: ACE Learning System
+
+#### [NEW] [engine.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/ace/engine.py)
+Context Learning Engine (Mode A — always on):
+- Ingests approved task outputs, reviews, test results
+- Generates playbooks and decision records
+- All learning is versioned and rollback-supported
+
+#### [NEW] [playbooks.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/ace/playbooks.py), [decisions.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/ace/decisions.py), [versioning.py](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/backend/ace/versioning.py)
+Supporting modules for playbook generation, decision tracking, and version management.
+
+---
+
+### Phase 11: Dashboard UI (React + TypeScript)
+
+#### [NEW] React app via Vite
+Key components:
+- **TaskBoard.tsx**: Kanban board with drag-drop columns (Backlog, In Progress, Review, Done)
+- **AgentFeed.tsx**: Real-time agent activity log
+- **ArtifactViewer.tsx**: View code/docs/designs produced by agents
+- **Controls.tsx**: Approve PR, Pause Agent, Reassign Task buttons
+
+Premium design with dark theme, glassmorphism, micro-animations, Inter font.
+
+---
+
+### Phase 12: Integration & Documentation
+
+#### [NEW] [README.md](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/README.md)
+Full setup instructions, architecture diagram, usage examples.
+
+#### [NEW] [setup.sh](file:///Users/jiviteshbansal/Desktop/orchestra%20AI%20Made/setup.sh)
+One-command setup script.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. **Backend startup**: `cd backend && python -c "from main import app; print('OK')"`
+2. **Database init**: `cd backend && python -c "from database import init_db; init_db(); print('DB OK')"`
+3. **API smoke test**: Start server with `uvicorn main:app`, then `curl http://localhost:8000/api/tasks`
+4. **Frontend build**: `cd frontend && npm run build` — must succeed with zero errors
+
+### Manual Verification
+1. Start backend: `cd backend && uvicorn main:app --reload --port 8000`
+2. Start frontend: `cd frontend && npm run dev`
+3. Open dashboard in browser — verify Kanban board renders
+4. Submit a project request via the UI — verify task creation
+5. Check agent activity feed shows orchestrator activity
+6. Verify artifacts appear in the Artifact Viewer
+
+> [!IMPORTANT]
+> The system uses local LLMs by default. To test with actual AI responses, you need either:
+> - A local llama.cpp server running on port 8080, OR
+> - Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in `.env` for remote fallback
+>
+> Without an LLM, the system will use mock responses for demonstration.
