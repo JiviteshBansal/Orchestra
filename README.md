@@ -87,16 +87,3 @@ cd frontend && npm run dev
 6. **Peer review** by another agent — approve or revise
 7. Approved tasks get **Git commits** and **PR creation**
 8. Track everything in the **activity feed** and **artifact viewer**
-
-## Configuration
-
-Edit `.env` in the project root:
-```env
-LM_STUDIO_BASE_URL=http://127.0.0.1:1234/v1
-LM_STUDIO_MODEL=codellama-7b-instruct
-OPENAI_API_KEY=      # optional remote fallback
-ANTHROPIC_API_KEY=   # optional remote fallback
-```
-
-## License
-MIT
