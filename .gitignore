@@ -1,0 +1,85 @@
+# ========================
+# Environment & Secrets
+# ========================
+.env
+.env.local
+.env.*.local
+
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+venv/
+.venv/
+env/
+
+# ========================
+# Node.js / Frontend
+# ========================
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.npm
+.eslintcache
+*.tsbuildinfo
+
+# ========================
+# Database & Runtime Data
+# ========================
+data/orchestra.db
+data/vector_store/
+projects/
+
+# ========================
+# macOS
+# ========================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# ========================
+# IDE / Editor
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ========================
+# Docker
+# ========================
+docker/sandbox.Dockerfile
+
+# ========================
+# Generated / Non-Essential Docs
+# ========================
+*.docx
+*.md
+!README.md
+*.md.resolved
+generate_documentation.py
+
+# ========================
+# Misc
+# ========================
+*.log
+*.bak
+*.tmp
+.cache/
