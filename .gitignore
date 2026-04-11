@@ -71,10 +71,11 @@ docker/sandbox.Dockerfile
 # Generated / Non-Essential Docs
 # ========================
 *.docx
-*.md
+/*.md
 !README.md
 *.md.resolved
 generate_documentation.py
+!prompts/
 
 # ========================
 # Misc
