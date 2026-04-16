@@ -307,12 +307,17 @@ class Orchestrator:
 
     def _create_db_tasks(self, db: Session, tasks: list[dict], project_name: str) -> list:
         from backend.models.task import Task
-        from backend.models.agent import Agent
+        from backend.models.agent import Agent, AgentRole
 
         db_tasks = []
         for t in tasks:
-            role = t.get("assigned_role", "fullstack")
-            agent = db.query(Agent).filter(Agent.role == role).first()
+            role_str = t.get("assigned_role", "fullstack").lower()
+            try:
+                role_enum = AgentRole(role_str)
+            except ValueError:
+                role_enum = AgentRole.FULLSTACK
+
+            agent = db.query(Agent).filter(Agent.role == role_enum).first()
 
             # Convert risk_level string to proper enum
             risk_str = t.get("risk_level", "medium").lower()
