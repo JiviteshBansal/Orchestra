@@ -11,7 +11,7 @@ from backend.agents.registry import agent_registry
 from backend.memory import memory_manager
 from backend.tools.executor import tool_executor, ToolResult
 from backend.git_manager.operations import git_manager, pr_manager
-from backend.models.task import TaskStatus
+from backend.models.task import TaskStatus, RiskLevel
 from backend.models.run_log import LogStatus
 
 logger = logging.getLogger(__name__)
@@ -314,13 +314,20 @@ class Orchestrator:
             role = t.get("assigned_role", "fullstack")
             agent = db.query(Agent).filter(Agent.role == role).first()
 
+            # Convert risk_level string to proper enum
+            risk_str = t.get("risk_level", "medium").lower()
+            try:
+                risk_enum = RiskLevel(risk_str)
+            except ValueError:
+                risk_enum = RiskLevel.MEDIUM
+
             task = Task(
                 title=t.get("title", "Untitled"),
                 description=t.get("description", ""),
                 acceptance_criteria=t.get("acceptance_criteria", ""),
                 status=TaskStatus.BACKLOG,
                 owner_agent_id=agent.id if agent else None,
-                risk_level=t.get("risk_level", "medium"),
+                risk_level=risk_enum,
                 effort_estimate=t.get("effort_estimate", "medium"),
                 project_name=project_name,
             )
