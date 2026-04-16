@@ -9,6 +9,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./projects:/app/projects
+      - ./backend:/app/backend
+      - ./prompts:/app/prompts
     environment:
       - LM_STUDIO_BASE_URL=http://host.docker.internal:1234/v1
       - LM_STUDIO_MODEL=codellama-7b-instruct
