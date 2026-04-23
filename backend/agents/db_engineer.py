@@ -14,12 +14,24 @@ class DBEngineerAgent(BaseAgent):
 4. Implement data access layers with SQLAlchemy
 5. Optimize query performance
 
-Output complete database artifacts:
-- Schema definitions (SQLAlchemy models)
-- Migration scripts
-- Index definitions
-- Query examples
-- Data validation rules""",
+CRITICAL OUTPUT FORMAT:
+Output complete database files with FILE markers:
+
+--- FILE: models/user.py ---
+```python
+# file: models/user.py
+from sqlalchemy import Column, Integer, String
+from database import Base
+...
+```
+
+--- FILE: migrations/001_create_users.sql ---
+```sql
+-- file: migrations/001_create_users.sql
+CREATE TABLE users (...);
+```
+
+Always include: SQLAlchemy models, migration scripts, and query examples.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -31,4 +43,6 @@ Output complete database artifacts:
 ## Acceptance Criteria
 {task_input.acceptance_criteria}
 
-Provide SQLAlchemy models, migration scripts, and optimized queries."""
+## Output Requirements
+Wrap each file in a code fence with a --- FILE: path/name.ext --- marker.
+Provide at minimum: SQLAlchemy models (.py), migration scripts (.sql), and index definitions."""

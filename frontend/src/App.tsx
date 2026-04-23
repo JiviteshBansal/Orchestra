@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from './api/client';
 import TaskBoard from './components/TaskBoard';
 import AgentFeed from './components/AgentFeed';
@@ -20,6 +20,12 @@ interface Toast {
     type: 'success' | 'error' | 'info';
 }
 
+interface ProgressEntry {
+    stage: string;
+    message: string;
+    timestamp: string;
+}
+
 const STAT_CARDS = [
     { key: 'total', label: 'Tasks', variant: '' },
     { key: 'progress', label: 'In Progress', variant: 'info' },
@@ -30,6 +36,15 @@ const STAT_CARDS = [
     { key: 'playbooks', label: 'Playbooks', variant: 'success' },
 ] as const;
 
+const STAGE_ICONS: Record<string, string> = {
+    planning: '📋',
+    planned: '✅',
+    executing: '⚡',
+    reviewing: '🔍',
+    completed: '🎉',
+    error: '❌',
+};
+
 export default function App() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [requestText, setRequestText] = useState('');
@@ -37,6 +52,9 @@ export default function App() {
     const [submitting, setSubmitting] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [toast, setToast] = useState<Toast | null>(null);
+    const [pipelineProgress, setPipelineProgress] = useState<ProgressEntry[]>([]);
+    const [pipelineStatus, setPipelineStatus] = useState<string>('');
+    const progressEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         loadStats();
@@ -48,6 +66,11 @@ export default function App() {
             return () => clearTimeout(t);
         }
     }, [toast]);
+
+    // Auto-scroll progress log
+    useEffect(() => {
+        progressEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [pipelineProgress]);
 
     async function loadStats() {
         try {
@@ -69,13 +92,48 @@ export default function App() {
     async function handleSubmitRequest() {
         if (!requestText.trim()) return;
         setSubmitting(true);
+        setPipelineProgress([]);
+        setPipelineStatus('planning');
+
+        setPipelineProgress(prev => [...prev, {
+            stage: 'planning',
+            message: 'Submitting request to Project Manager...',
+            timestamp: new Date().toISOString(),
+        }]);
+
         try {
             const result = await api.submitRequest(requestText, projectName);
-            showToast(`Created ${result.task_count || 0} tasks from your request`, 'success');
+
+            // The result now includes progress from the full pipeline
+            if (result.progress && result.progress.length > 0) {
+                setPipelineProgress(result.progress);
+            }
+
+            setPipelineStatus(result.status || 'completed');
+
+            if (result.error) {
+                showToast(`Error: ${result.error}`, 'error');
+                setPipelineStatus('error');
+            } else {
+                const taskCount = result.task_count || 0;
+                showToast(
+                    result.status === 'completed'
+                        ? `Pipeline complete! ${taskCount} tasks processed.`
+                        : `Created ${taskCount} tasks from your request`,
+                    'success'
+                );
+            }
+
             setRequestText('');
             refresh();
         } catch (err: any) {
             showToast(err.message, 'error');
+            setPipelineStatus('error');
+            setPipelineProgress(prev => [...prev, {
+                stage: 'error',
+                message: `Failed: ${err.message}`,
+                timestamp: new Date().toISOString(),
+            }]);
         } finally {
             setSubmitting(false);
         }
@@ -84,8 +142,12 @@ export default function App() {
     async function handleExecuteTask(taskId: number) {
         showToast(`Executing task #${taskId}...`, 'info');
         try {
-            await api.executeTask(taskId);
-            showToast(`Task #${taskId} executed — now in review`, 'success');
+            const result = await api.executeTask(taskId);
+            const fileCount = result.files_produced || 0;
+            showToast(
+                `Task #${taskId} executed — ${fileCount} files produced, now in review`,
+                'success'
+            );
             refresh();
         } catch (err: any) {
             showToast(`Execution failed: ${err.message}`, 'error');
@@ -97,9 +159,10 @@ export default function App() {
         try {
             const result = await api.reviewTask(taskId);
             if (result.approved) {
-                showToast(`Task #${taskId} approved — PR created`, 'success');
+                const fileCount = result.files_written?.length || 0;
+                showToast(`Task #${taskId} approved — ${fileCount} files written to project`, 'success');
             } else {
-                showToast(`Task #${taskId} needs revision`, 'info');
+                showToast(`Task #${taskId} needs revision — sent back for re-work`, 'info');
             }
             refresh();
         } catch (err: any) {
@@ -119,6 +182,11 @@ export default function App() {
             case 'playbooks': return stats.ace_stats?.playbook_count || 0;
             default: return 0;
         }
+    }
+
+    function dismissProgress() {
+        setPipelineProgress([]);
+        setPipelineStatus('');
     }
 
     return (
@@ -162,13 +230,49 @@ export default function App() {
                         onClick={handleSubmitRequest}
                         disabled={submitting || !requestText.trim()}
                     >
-                        {submitting ? 'Processing…' : 'Submit'}
+                        {submitting ? '⏳ Working…' : '🚀 Submit'}
                     </button>
                     <button className="btn btn-ghost" onClick={refresh} title="Refresh dashboard">
                         ↻
                     </button>
                 </div>
             </div>
+
+            {/* Pipeline Progress Panel */}
+            {pipelineProgress.length > 0 && (
+                <div className="pipeline-progress">
+                    <div className="pipeline-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '14px' }}>
+                                {STAGE_ICONS[pipelineStatus] || '⏳'}
+                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 600 }}>
+                                Pipeline {pipelineStatus === 'completed' ? 'Complete' :
+                                         pipelineStatus === 'error' ? 'Failed' : 'Running...'}
+                            </span>
+                            {submitting && (
+                                <div className="spinner" style={{ width: '14px', height: '14px' }} />
+                            )}
+                        </div>
+                        {!submitting && (
+                            <button className="btn btn-ghost btn-sm" onClick={dismissProgress} style={{ fontSize: '10px' }}>
+                                Dismiss
+                            </button>
+                        )}
+                    </div>
+                    <div className="pipeline-log">
+                        {pipelineProgress.map((entry, i) => (
+                            <div key={i} className={`pipeline-entry pipeline-${entry.stage}`}>
+                                <span className="pipeline-icon">
+                                    {STAGE_ICONS[entry.stage] || '•'}
+                                </span>
+                                <span className="pipeline-msg">{entry.message}</span>
+                            </div>
+                        ))}
+                        <div ref={progressEndRef} />
+                    </div>
+                </div>
+            )}
 
             {/* Stats */}
             {stats && (

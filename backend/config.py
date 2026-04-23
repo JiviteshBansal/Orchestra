@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     LM_STUDIO_BASE_URL: str = "http://127.0.0.1:1234/v1"
     LM_STUDIO_MODEL: str = "codellama-7b-instruct"
     LLM_TIMEOUT: int = 120
-    LLM_MAX_TOKENS: int = 2048
+    LLM_MAX_TOKENS: int = 4096
     LLM_TEMPERATURE: float = 0.7
 
     OPENAI_API_KEY: str = ""
@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     DOCKER_SANDBOX_IMAGE: str = "orchestra-sandbox"
     DOCKER_TIMEOUT: int = 60
+
+    AUTO_EXECUTE: bool = True
 
     GIT_AUTHOR_NAME: str = "Orchestra AI"
     GIT_AUTHOR_EMAIL: str = "orchestra@local"

@@ -1,4 +1,5 @@
 import json
+import re
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -69,6 +70,106 @@ class ReviewFeedback:
         }
 
 
+# ---------------------------------------------------------------------------
+# File-extraction helpers
+# ---------------------------------------------------------------------------
+
+# Pattern: ```lang\n# file: path/to/file.ext  OR  // file: path/to/file.ext
+_CODE_BLOCK_RE = re.compile(
+    r"```(\w*)\s*\n"
+    r"(?:#|//|<!--|/\*)\s*(?:file|filename|FILE|FILENAME)\s*:\s*(.+?)\s*(?:-->|\*/)?\s*\n"
+    r"(.*?)"
+    r"\n```",
+    re.DOTALL,
+)
+
+# Pattern: --- FILE: path/to/file.ext ---
+_FILE_MARKER_RE = re.compile(
+    r"---\s*FILE:\s*(.+?)\s*---\s*\n"
+    r"```\w*\s*\n(.*?)\n```",
+    re.DOTALL,
+)
+
+# Simpler fallback: ```lang  filename.ext\n...```
+_SIMPLE_BLOCK_RE = re.compile(
+    r"```(\w+)\s+([\w./\-]+\.\w+)\s*\n(.*?)\n```",
+    re.DOTALL,
+)
+
+LANG_EXT = {
+    "python": ".py", "py": ".py",
+    "javascript": ".js", "js": ".js",
+    "typescript": ".ts", "ts": ".ts",
+    "tsx": ".tsx", "jsx": ".jsx",
+    "css": ".css", "html": ".html",
+    "json": ".json", "yaml": ".yaml", "yml": ".yml",
+    "sql": ".sql", "sh": ".sh", "bash": ".sh",
+    "dockerfile": "Dockerfile", "docker": "Dockerfile",
+    "toml": ".toml", "ini": ".ini", "cfg": ".cfg",
+    "md": ".md", "markdown": ".md",
+}
+
+
+def extract_files_from_output(text: str) -> list[tuple[str, str, str]]:
+    """Extract (filename, content, file_type) tuples from LLM output.
+
+    Tries multiple patterns to find embedded code files.
+    Returns an empty list if no files are found.
+    """
+    files: list[tuple[str, str, str]] = []
+    seen: set[str] = set()
+
+    # Strategy 1: --- FILE: path --- markers
+    for m in _FILE_MARKER_RE.finditer(text):
+        fname, content = m.group(1).strip(), m.group(2).strip()
+        if fname not in seen:
+            seen.add(fname)
+            files.append((fname, content, _guess_type(fname)))
+
+    # Strategy 2: ```lang\n# file: path
+    for m in _CODE_BLOCK_RE.finditer(text):
+        fname, content = m.group(2).strip(), m.group(3).strip()
+        if fname not in seen:
+            seen.add(fname)
+            files.append((fname, content, _guess_type(fname)))
+
+    # Strategy 3: ```lang filename.ext
+    for m in _SIMPLE_BLOCK_RE.finditer(text):
+        lang, fname, content = m.group(1), m.group(2).strip(), m.group(3).strip()
+        if fname not in seen:
+            seen.add(fname)
+            files.append((fname, content, _guess_type(fname)))
+
+    # Strategy 4: If nothing matched but there are code blocks, create
+    # numbered files from the fenced blocks
+    if not files:
+        blocks = re.findall(r"```(\w*)\n(.*?)\n```", text, re.DOTALL)
+        for idx, (lang, content) in enumerate(blocks, 1):
+            content = content.strip()
+            if len(content) < 10:
+                continue
+            ext = LANG_EXT.get(lang.lower(), ".txt")
+            fname = f"output_{idx}{ext}"
+            files.append((fname, content, _guess_type(fname)))
+
+    return files
+
+
+def _guess_type(fname: str) -> str:
+    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+    if ext in ("py", "js", "ts", "tsx", "jsx", "java", "go", "rs", "cpp", "c", "rb"):
+        return "code"
+    if ext in ("css", "scss", "less"):
+        return "style"
+    if ext in ("html", "md", "txt", "rst"):
+        return "document"
+    if ext in ("json", "yaml", "yml", "toml", "ini", "cfg", "env"):
+        return "config"
+    if ext in ("sql",):
+        return "sql"
+    return "code"
+
+
 class BaseAgent(ABC):
     def __init__(
         self,
@@ -83,7 +184,8 @@ class BaseAgent(ABC):
         self.role = role
         self.system_prompt = system_prompt
         self.model_profile = model_profile or ModelProfile(
-            primary_model="codellama-7b-instruct"
+            primary_model="codellama-7b-instruct",
+            max_tokens=4096,
         )
         self.logger = logging.getLogger(f"agent.{name}")
 
@@ -125,17 +227,32 @@ class BaseAgent(ABC):
         pass
 
     def _parse_response(self, response: LLMResponse, task_input: TaskInput) -> AgentOutput:
+        """Parse LLM response, extracting individual files as attachments."""
+        content = response.content
+
+        # Extract structured files from the response
+        extracted_files = extract_files_from_output(content)
+        attachments = [
+            Attachment(filename=fname, content=fcontent, file_type=ftype)
+            for fname, fcontent, ftype in extracted_files
+        ]
+
         return AgentOutput(
             reasoning_summary=f"Agent {self.name} processed task: {task_input.title}",
-            solution_artifact=response.content,
+            solution_artifact=content,
+            attachments=attachments,
             validation_checklist=[
                 {"item": "Output generated", "passed": True},
-                {"item": "Response non-empty", "passed": len(response.content) > 0},
+                {"item": "Response non-empty", "passed": len(content) > 0},
+                {"item": "Files extracted", "passed": len(attachments) > 0},
+                {"item": f"File count: {len(attachments)}", "passed": True},
             ],
             metadata={
                 "model": response.model,
                 "tokens": response.tokens_used,
                 "latency_ms": response.latency_ms,
+                "files_extracted": len(attachments),
+                "file_names": [a.filename for a in attachments],
             },
         )
 
@@ -148,7 +265,10 @@ Description: {task_input.description}
 Acceptance Criteria: {task_input.acceptance_criteria}
 
 ## Output to Review
-{agent_output.solution_artifact}
+{agent_output.solution_artifact[:3000]}
+
+## Files Produced
+{chr(10).join(f'- {a.filename}' for a in agent_output.attachments) or 'No individual files extracted'}
 
 ## Instructions
 1. Check if the output meets the acceptance criteria

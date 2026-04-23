@@ -14,12 +14,28 @@ class ResearchAgent(BaseAgent):
 4. Provide architectural recommendations
 5. Document findings with references and rationale
 
-Output structured research reports with:
-- Problem analysis
-- Options considered with pros/cons
-- Recommended approach with justification
-- Implementation guidelines
-- Risk assessment""",
+CRITICAL OUTPUT FORMAT:
+Output structured research as files with FILE markers:
+
+--- FILE: research/analysis.md ---
+```markdown
+# file: research/analysis.md
+## Problem Analysis
+...
+## Options Considered
+...
+## Recommendation
+...
+```
+
+--- FILE: research/architecture.md ---
+```markdown
+# file: research/architecture.md
+## System Architecture
+...
+```
+
+Include: problem analysis, options with pros/cons, recommendation, implementation guidelines.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -31,4 +47,6 @@ Output structured research reports with:
 ## Expected Output
 {task_input.acceptance_criteria}
 
+## Output Requirements
+Wrap each deliverable in a code fence with a --- FILE: path/name.ext --- marker.
 Provide a thorough, structured research report with analysis, options, and recommendations."""

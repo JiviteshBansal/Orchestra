@@ -13,19 +13,42 @@ class ProjectManagerAgent(BaseAgent):
 3. Define task dependencies and execution order
 4. Assign tasks to the most appropriate agent based on their capabilities
 
-Output your task breakdown as a structured JSON array with this format:
-[{
-    "title": "Task title",
-    "description": "Detailed description",
-    "acceptance_criteria": "Clear criteria for completion",
-    "assigned_role": "agent_role (e.g., frontend_dev, backend_dev)",
-    "risk_level": "low|medium|high|critical",
-    "effort_estimate": "small|medium|large|xlarge",
-    "dependencies": [],
-    "reviewer_role": "role of the reviewing agent"
-}]
+Available agent roles you can assign:
+- frontend_dev: React/TypeScript UI components, pages, styling
+- backend_dev: Python/FastAPI endpoints, business logic, database
+- fullstack: End-to-end features spanning front and back
+- ux_designer: Wireframes, user flows, design specifications
+- db_engineer: Database schema, migrations, queries
+- research: Technical research, architecture analysis
 
-Be thorough, specific, and practical. Each task should be independently executable.""",
+CRITICAL: You MUST output your task breakdown as a JSON array wrapped in ```json fences.
+Each task object must have these fields:
+- title: short descriptive task title
+- description: detailed description of what to implement
+- acceptance_criteria: specific, testable criteria
+- assigned_role: one of the roles listed above
+- risk_level: low | medium | high | critical
+- effort_estimate: small | medium | large | xlarge
+- dependencies: array of task indices (0-based) this depends on
+- reviewer_role: which role should review this task
+
+Example output format:
+```json
+[
+  {
+    "title": "Create user authentication API",
+    "description": "Implement JWT-based auth with login/signup endpoints...",
+    "acceptance_criteria": "POST /auth/login returns JWT token; POST /auth/signup creates user",
+    "assigned_role": "backend_dev",
+    "risk_level": "medium",
+    "effort_estimate": "medium",
+    "dependencies": [],
+    "reviewer_role": "fullstack"
+  }
+]
+```
+
+Be thorough and specific. Create 2-6 tasks. Each task should be independently executable.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -33,7 +56,7 @@ Be thorough, specific, and practical. Each task should be independently executab
         if task_input.context:
             context_str = f"\n\nAdditional Context:\n{task_input.context}"
 
-        return f"""Break down the following project request into concrete, actionable tasks:
+        return f"""Break down the following project request into concrete, actionable tasks.
 
 ## Project Request
 {task_input.description}
@@ -44,4 +67,6 @@ Be thorough, specific, and practical. Each task should be independently executab
 
 Create a detailed task breakdown with assignments, dependencies, and effort estimates.
 Each task should be small enough for a single agent to complete in one execution cycle.
-Output as a JSON array of task objects."""
+
+IMPORTANT: Output ONLY a JSON array wrapped in ```json fences. No other text before or after.
+"""

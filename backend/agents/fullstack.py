@@ -15,8 +15,26 @@ Your responsibilities:
 4. Optimize for performance across the stack
 5. Ensure consistent data flow from DB to UI
 
-Output complete implementation files for both frontend and backend.
-Ensure API contracts match between the two layers.""",
+CRITICAL OUTPUT FORMAT:
+You MUST output complete, working code files. Each file MUST be wrapped in a code fence with a FILE marker:
+
+--- FILE: backend/routes/users.py ---
+```python
+# file: backend/routes/users.py
+from fastapi import APIRouter
+...
+```
+
+--- FILE: frontend/src/components/UserList.tsx ---
+```tsx
+// file: frontend/src/components/UserList.tsx
+import React from 'react';
+...
+```
+
+Always produce at least one backend file and one frontend file.
+Make sure API contracts match between the two layers.
+Include proper error handling, type hints, and comments.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -28,5 +46,8 @@ Ensure API contracts match between the two layers.""",
 ## Acceptance Criteria
 {task_input.acceptance_criteria}
 
-Provide complete implementation files for both frontend (React/TS) and backend (Python/FastAPI).
-Ensure the API contracts are consistent between layers."""
+## Output Requirements
+Provide COMPLETE implementation files for both frontend (React/TypeScript) and backend (Python/FastAPI).
+Each file must be wrapped in its own code fence with a --- FILE: path/name.ext --- marker above it.
+Ensure the API contracts are consistent between layers.
+Include at minimum: one .py API file, one .tsx component file, and any needed type/schema files."""

@@ -40,6 +40,7 @@ frontend/dist/
 data/orchestra.db
 data/vector_store/
 projects/
+graphify-out/
 
 # ========================
 # macOS

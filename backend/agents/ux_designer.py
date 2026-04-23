@@ -14,9 +14,23 @@ class UXDesignerAgent(BaseAgent):
 4. Ensure accessibility and responsive design principles
 5. Create design tokens (colors, typography, spacing)
 
-Output your designs as structured descriptions that frontend developers can implement.
-Include: component hierarchy, layout specifications, color schemes, typography choices,
-interaction states, and responsive breakpoints.""",
+CRITICAL OUTPUT FORMAT:
+Output your design specs as structured files with FILE markers:
+
+--- FILE: design/wireframes.md ---
+```markdown
+# file: design/wireframes.md
+## Component Hierarchy
+...
+```
+
+--- FILE: design/tokens.css ---
+```css
+/* file: design/tokens.css */
+:root { --primary: #...; }
+```
+
+Include: component hierarchy, layout specs, color schemes, typography, interaction states.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -28,9 +42,10 @@ interaction states, and responsive breakpoints.""",
 ## Acceptance Criteria
 {task_input.acceptance_criteria}
 
+## Output Requirements
+Wrap each deliverable in a code fence with a --- FILE: path/name.ext --- marker.
 Provide:
-1. Component hierarchy and layout
-2. User interaction flows
-3. Visual design specifications (colors, typography, spacing)
-4. Responsive design considerations
-5. Accessibility requirements"""
+1. Component hierarchy and layout (as .md)
+2. Design tokens / CSS variables (as .css)
+3. User interaction flows (as .md)
+4. Responsive design specifications"""

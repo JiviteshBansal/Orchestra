@@ -15,13 +15,30 @@ Your responsibilities:
 4. Write CSS/styled-components for pixel-perfect designs
 5. Ensure cross-browser compatibility
 
-Output your code as complete, ready-to-use files. Include:
-- Component files (.tsx)
-- Style files (.css or styled-components)
-- Type definitions
-- Unit test outlines
+CRITICAL OUTPUT FORMAT:
+You MUST output complete, working code files. Each file MUST be wrapped in a code fence with a FILE marker:
 
-Always follow React best practices: functional components, hooks, proper error boundaries.""",
+--- FILE: src/components/UserList.tsx ---
+```tsx
+// file: src/components/UserList.tsx
+import React, { useState, useEffect } from 'react';
+...
+```
+
+--- FILE: src/styles/UserList.css ---
+```css
+/* file: src/styles/UserList.css */
+.user-list { ... }
+```
+
+--- FILE: src/types/user.ts ---
+```typescript
+// file: src/types/user.ts
+export interface User { ... }
+```
+
+Always follow React best practices: functional components, hooks, proper error boundaries.
+Always produce at least: one .tsx component, one .css style file, and one types/interface file.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -40,5 +57,7 @@ Always follow React best practices: functional components, hooks, proper error b
 {task_input.acceptance_criteria}
 {deps}
 
-Provide complete React + TypeScript code files ready for implementation.
-Include component code, styles, types, and test cases."""
+## Output Requirements
+Provide COMPLETE React + TypeScript code files ready for implementation.
+Each file must be wrapped in its own code fence with a --- FILE: path/name.ext --- marker above it.
+Include at minimum: component code (.tsx), styles (.css), and type definitions (.ts)."""

@@ -15,14 +15,32 @@ Your responsibilities:
 4. Implement authentication, validation, and error handling
 5. Write comprehensive unit and integration tests
 
-Output your code as complete, production-ready Python files. Include:
-- API route handlers
-- Service/business logic modules
-- Data access functions
-- Pydantic schemas
-- Test files
+CRITICAL OUTPUT FORMAT:
+You MUST output complete, working Python files. Each file MUST be wrapped in a code fence with a FILE marker:
 
-Follow Python best practices: type hints, async/await, proper error handling, logging.""",
+--- FILE: routes/users.py ---
+```python
+# file: routes/users.py
+from fastapi import APIRouter, Depends
+...
+```
+
+--- FILE: models/user.py ---
+```python
+# file: models/user.py
+from sqlalchemy import Column, Integer, String
+...
+```
+
+--- FILE: tests/test_users.py ---
+```python
+# file: tests/test_users.py
+import pytest
+...
+```
+
+Follow Python best practices: type hints, async/await, proper error handling, logging.
+Always produce at least: one route file, one model/schema file, and one test file.""",
         )
 
     def _build_prompt(self, task_input: TaskInput) -> str:
@@ -41,4 +59,7 @@ Follow Python best practices: type hints, async/await, proper error handling, lo
 {task_input.acceptance_criteria}
 {deps}
 
-Provide complete Python/FastAPI code files. Include API routes, business logic, tests."""
+## Output Requirements
+Provide COMPLETE Python/FastAPI code files ready for production.
+Each file must be wrapped in its own code fence with a --- FILE: path/name.py --- marker above it.
+Include at minimum: API routes, models/schemas, and test files."""

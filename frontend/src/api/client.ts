@@ -39,9 +39,12 @@ export const api = {
     reviewTask: (taskId: number) =>
         request('/orchestrator/review', { method: 'POST', body: JSON.stringify({ task_id: taskId }) }),
     getWorkflows: () => request('/orchestrator/workflows'),
+    getWorkflowProgress: (workflowId: string) =>
+        request(`/orchestrator/workflows/${workflowId}/progress`),
 
-    // Artifacts
-    getArtifacts: (taskId?: number) => request(`/artifacts/${taskId ? `?task_id=${taskId}` : ''}`),
+    // Artifacts — now supports filtering by task_id
+    getArtifacts: (taskId?: number) =>
+        request(`/artifacts/${taskId ? `?task_id=${taskId}` : ''}`),
 
     // Pull Requests
     getPRs: (status?: string) => request(`/pull-requests/${status ? `?status=${status}` : ''}`),
