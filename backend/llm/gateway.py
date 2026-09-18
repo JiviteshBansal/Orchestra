@@ -1,10 +1,7 @@
 import time
-import json
 import logging
 from typing import Optional
 from dataclasses import dataclass, field
-
-import httpx
 
 from backend.config import settings
 
@@ -17,11 +14,11 @@ class ModelProfile:
     fallback_chain: list[str] = field(default_factory=list)
     max_tokens: int = 2048
     temperature: float = 0.7
-    provider: str = "lm_studio"
+    provider: str = "gemini"
     constraints: dict = field(default_factory=lambda: {
         "max_latency_ms": 30000,
         "max_cost_per_call": 0.0,
-        "privacy_level": "local"
+        "privacy_level": "cloud"
     })
 
 
@@ -72,13 +69,20 @@ class ModelRegistry:
         self._register_defaults()
 
     def _register_defaults(self):
-        self.register("codellama-7b-instruct", {
-            "provider": "lm_studio",
-            "base_url": settings.LM_STUDIO_BASE_URL,
-            "model_id": settings.LM_STUDIO_MODEL,
+        self.register("gemini-1.5-flash", {
+            "provider": "gemini",
+            "model_id": "gemini-1.5-flash",
+            "latency_tier": "fast",
+            "cost_per_1k_tokens": 0.0,
+            "privacy": "cloud",
+            "capabilities": ["code", "reasoning", "planning"],
+        })
+        self.register("gemini-1.5-pro", {
+            "provider": "gemini",
+            "model_id": "gemini-1.5-pro",
             "latency_tier": "medium",
             "cost_per_1k_tokens": 0.0,
-            "privacy": "local",
+            "privacy": "cloud",
             "capabilities": ["code", "reasoning", "planning"],
         })
 
@@ -96,8 +100,25 @@ class LLMGateway:
     def __init__(self):
         self.registry = ModelRegistry()
         self.telemetry = TelemetryTracker()
-        self._client = httpx.Client(timeout=settings.LLM_TIMEOUT)
-        self._async_client = httpx.AsyncClient(timeout=settings.LLM_TIMEOUT)
+        self._gemini_client = None
+
+    def _get_gemini_client(self):
+        """Lazily initialise the google-generativeai client."""
+        if self._gemini_client is None:
+            try:
+                import google.generativeai as genai
+                api_key = settings.GEMINI_API_KEY or settings.OPENAI_API_KEY
+                if not api_key:
+                    raise ValueError("No API key set. Add GEMINI_API_KEY to your .env file.")
+                genai.configure(api_key=api_key)
+                self._gemini_client = genai
+                logger.info("Gemini client initialised successfully.")
+            except ImportError:
+                raise RuntimeError(
+                    "google-generativeai is not installed. "
+                    "Run: pip install google-generativeai"
+                )
+        return self._gemini_client
 
     async def generate(
         self,
@@ -108,9 +129,9 @@ class LLMGateway:
         temperature: Optional[float] = None,
     ) -> LLMResponse:
         profile = model_profile or ModelProfile(
-            primary_model=settings.LM_STUDIO_MODEL
+            primary_model=settings.LM_STUDIO_MODEL or "gemini-1.5-flash"
         )
-        model_name = profile.primary_model or settings.LM_STUDIO_MODEL
+        model_name = profile.primary_model or "gemini-1.5-flash"
         chain = [model_name] + profile.fallback_chain
 
         for attempt_model in chain:
@@ -128,7 +149,7 @@ class LLMGateway:
         return LLMResponse(
             content="",
             model=model_name,
-            provider="none",
+            provider="gemini",
             success=False,
             error="All models in fallback chain failed",
         )
@@ -141,61 +162,53 @@ class LLMGateway:
         max_tokens: int,
         temperature: float,
     ) -> LLMResponse:
-        model_config = self.registry.get(model)
-        provider = model_config["provider"] if model_config else "lm_studio"
-        base_url = model_config["base_url"] if model_config else settings.LM_STUDIO_BASE_URL
-
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-
-        payload = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "stream": False,
-        }
-
-        headers = {"Content-Type": "application/json"}
-        if settings.GEMINI_API_KEY:
-            headers["Authorization"] = f"Bearer {settings.GEMINI_API_KEY}"
-        elif settings.OPENAI_API_KEY:
-            headers["Authorization"] = f"Bearer {settings.OPENAI_API_KEY}"
-
         start = time.time()
         try:
-            resp = await self._async_client.post(
-                f"{base_url}/chat/completions",
-                json=payload,
-                headers=headers,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+            import asyncio
+            genai = self._get_gemini_client()
 
-            content = data["choices"][0]["message"]["content"]
-            tokens = data.get("usage", {}).get("total_tokens", 0)
+            generation_config = {
+                "max_output_tokens": max_tokens,
+                "temperature": temperature,
+            }
+
+            # Run the synchronous Gemini call in a thread so we don't block the event loop
+            def _sync_call():
+                client_model = genai.GenerativeModel(
+                    model_name=model,
+                    system_instruction=system_prompt if system_prompt else None,
+                    generation_config=generation_config,
+                )
+                return client_model.generate_content(prompt)
+
+            result = await asyncio.get_event_loop().run_in_executor(None, _sync_call)
+
+            content = result.text
             latency_ms = (time.time() - start) * 1000
 
-            self.telemetry.record(model, provider, tokens, latency_ms, True)
+            # Estimate token usage (Gemini SDK may not always expose this)
+            tokens = 0
+            if hasattr(result, "usage_metadata") and result.usage_metadata:
+                tokens = getattr(result.usage_metadata, "total_token_count", 0) or 0
+
+            self.telemetry.record(model, "gemini", tokens, latency_ms, True)
 
             return LLMResponse(
                 content=content,
                 model=model,
-                provider=provider,
+                provider="gemini",
                 tokens_used=tokens,
                 latency_ms=latency_ms,
                 success=True,
             )
         except Exception as e:
             latency_ms = (time.time() - start) * 1000
-            self.telemetry.record(model, provider, 0, latency_ms, False)
-            logger.error(f"LLM call to {model} failed: {e}")
+            self.telemetry.record(model, "gemini", 0, latency_ms, False)
+            logger.error(f"Gemini call to {model} failed: {e}")
             return LLMResponse(
                 content="",
                 model=model,
-                provider=provider,
+                provider="gemini",
                 latency_ms=latency_ms,
                 success=False,
                 error=str(e),
