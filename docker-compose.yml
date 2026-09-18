@@ -12,8 +12,10 @@ services:
       - ./backend:/app/backend
       - ./prompts:/app/prompts
     environment:
-      - LM_STUDIO_BASE_URL=http://host.docker.internal:1234/v1
-      - LM_STUDIO_MODEL=codellama-7b-instruct
+      - LM_STUDIO_BASE_URL
+      - LM_STUDIO_MODEL
+      - OPENAI_API_KEY
+      - GEMINI_API_KEY
       - LLM_TIMEOUT=120
       - LLM_MAX_TOKENS=2048
       - LLM_TEMPERATURE=0.7

@@ -158,12 +158,18 @@ class LLMGateway:
             "stream": False,
         }
 
+        headers = {"Content-Type": "application/json"}
+        if settings.GEMINI_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.GEMINI_API_KEY}"
+        elif settings.OPENAI_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.OPENAI_API_KEY}"
+
         start = time.time()
         try:
             resp = await self._async_client.post(
                 f"{base_url}/chat/completions",
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             )
             resp.raise_for_status()
             data = resp.json()

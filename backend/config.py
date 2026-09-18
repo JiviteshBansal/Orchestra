@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
 
     OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
 
     DOCKER_SANDBOX_IMAGE: str = "orchestra-sandbox"

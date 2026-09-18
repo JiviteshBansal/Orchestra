@@ -62,6 +62,14 @@ class Orchestrator:
         )
 
         plan_output = await pm.execute(plan_input)
+        
+        # FIX: If the PM agent fails (e.g. LM Studio is not running), return the error so the Dashboard shows it
+        if plan_output.status == "failed":
+            error_msg = plan_output.reasoning_summary
+            self._log_progress(workflow_id, "error", f"Planning failed: {error_msg}")
+            self._active_workflows[workflow_id]["status"] = "error"
+            return {"error": f"LLM Connection failed: {error_msg}", "workflow_id": workflow_id}
+
         self.memory.store_task_context(0, f"Project plan: {plan_output.solution_artifact}", {
             "type": "plan",
             "project": project_name,
